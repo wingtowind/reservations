@@ -1,0 +1,12 @@
+# Local source material and asset preparation files are not needed on the public site.
+assets/source-digits/
+assets/source-symbols/
+tools/
+captcha-assets.html
+_upload/
+
+# Local editor and operating-system files.
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

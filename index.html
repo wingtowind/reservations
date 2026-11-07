@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f37f9b" />
+    <title>kpl快闪模拟练习</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <section class="start-view" id="start-view" aria-labelledby="start-title">
+      <div class="start-card">
+        <p class="start-eyebrow">kpl快闪模拟练习</p>
+        <h1 id="start-title">准备好，开始模拟</h1>
+        <p class="start-description">从 13:59:55 开始，提前 5 秒进入预约页面。14:00 整开放时段，完成验证码后查看你的分段成绩。</p>
+        <button class="primary-action" id="start-simulation" type="button">单人练习场</button>
+        <p class="start-note">准备期不计入成绩；验证码重试和校验等待计入耗时。</p>
+      </div>
+    </section>
+
+    <div class="simulation-clock" id="simulation-clock" role="timer" aria-label="模拟时间" aria-live="off" hidden>
+      <span>模拟时间</span><strong id="simulation-clock-value">13:59:55.000</strong>
+    </div>
+
+    <main class="event-page" aria-label="快闪预约模拟页面" hidden>
+      <header class="topbar">
+        <button class="back-button" id="back-to-start" aria-label="返回主界面">‹</button>
+        <strong>KPL 快闪预约</strong>
+        <button class="mini-menu" aria-label="更多选项"><span>•••</span><i></i></button>
+      </header>
+
+      <section class="event-poster" aria-labelledby="poster-title">
+        <div class="poster-intro">
+          <span class="poster-brand">KPL</span>
+          <h1 id="poster-title">快闪预约模拟</h1>
+          <p>14:00 开放预约</p>
+        </div>
+        <img class="poster-image" src="./assets/mengji-night-group.png" alt="深蓝色星空下的十二个梦叽角色" width="720" height="1280" />
+      </section>
+
+      <nav class="bottom-actions" aria-label="预约操作">
+        <button class="records-button" type="button" disabled>预约记录</button>
+        <button class="reserve-button" type="button" id="open-slots">去预约</button>
+      </nav>
+    </main>
+
+    <div class="screen-dimmer" id="screen-dimmer" hidden></div>
+    <section class="slot-sheet" id="slot-sheet" role="dialog" aria-modal="true" aria-labelledby="slot-title" hidden>
+      <div class="slot-sheet-header">
+        <button class="sheet-close" id="close-slots" type="button" aria-label="关闭">×</button>
+        <h2 id="slot-title">请选择预约时间</h2>
+      </div>
+      <div class="slot-list" id="slot-list" role="region" aria-label="预约时段列表，可上下滚动" tabindex="0">
+        <div class="session-heading">【2026-10-27】上午场</div>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="10:00-10:55" data-remaining="200"><span>10:00-10:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="11:00-11:55" data-remaining="200"><span>11:00-11:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="12:00-12:55" data-remaining="200"><span>12:00-12:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <div class="session-heading afternoon">【2026-10-27】下午场</div>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="13:00-13:55" data-remaining="200"><span>13:00-13:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="14:00-14:55" data-remaining="200"><span>14:00-14:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="15:00-15:55" data-remaining="200"><span>15:00-15:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="16:00-16:55" data-remaining="200"><span>16:00-16:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="17:00-17:55" data-remaining="200"><span>17:00-17:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="18:00-18:55" data-remaining="200"><span>18:00-18:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="19:00-19:55" data-remaining="200"><span>19:00-19:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="20:00-20:55" data-remaining="200"><span>20:00-20:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+        <button class="time-slot" type="button" data-date="2026-10-27" data-time="21:00-21:55" data-remaining="200"><span>21:00-21:55 <em>（可预约）</em></span><small>剩余200人</small></button>
+      </div>
+    </section>
+
+    <section class="captcha-dialog" id="captcha-dialog" role="dialog" aria-modal="true" aria-labelledby="captcha-title" hidden>
+      <h2 id="captcha-title">安全验证</h2>
+      <div class="challenge-prompt">
+        <span>请依次点击：</span>
+        <div class="challenge-code" id="challenge-code" aria-label="验证码提示"></div>
+      </div>
+
+      <div class="captcha-picture" id="captcha-picture" aria-label="验证码图片，请按提示顺序点击">
+        <img id="captcha-scene" alt="随机验证码背景" draggable="false" />
+        <div class="captcha-tokens" id="captcha-tokens"></div>
+        <div class="captcha-marks" id="captcha-marks" role="group" aria-label="已选位置，点击编号可取消"></div>
+        <span class="captcha-watermark">AI生成背景</span>
+        <div class="captcha-status" id="captcha-status" role="status" aria-live="polite" hidden>
+          <div class="captcha-loading" aria-hidden="true"><span></span><span></span><span></span></div>
+          <svg class="captcha-success-icon" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="currentColor"/><path d="m23 40 11 11 23-24" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <p class="captcha-status-message" id="captcha-status-message"></p>
+        </div>
+      </div>
+
+      <div class="captcha-actions">
+        <p class="captcha-feedback" id="captcha-feedback" aria-live="polite"></p>
+        <button class="refresh-button" id="refresh-captcha" type="button" aria-label="刷新验证码"><span>⟳</span></button>
+        <button class="confirm-button" id="confirm-captcha" type="button">确定</button>
+      </div>
+      <button class="captcha-close" id="close-captcha" type="button" aria-label="关闭验证码">×</button>
+    </section>
+
+    <section class="practice-result" id="practice-result" role="dialog" aria-modal="true" aria-labelledby="practice-result-title" hidden>
+      <p class="result-eyebrow">本轮模拟成绩</p>
+      <h2 id="practice-result-title"></h2>
+      <p class="result-slot" id="result-slot"></p>
+      <dl class="result-metrics">
+        <div class="result-metric result-metric-total"><dt>总耗时</dt><dd id="result-total"></dd></div>
+        <div class="result-metric"><dt>点击时段耗时</dt><dd id="result-slot-time"></dd></div>
+        <div class="result-metric"><dt>验证码耗时</dt><dd id="result-captcha-time"></dd></div>
+      </dl>
+      <p class="result-note">总耗时从 14:00 整计到显示验证成功，包含重试和校验等待。</p>
+      <div class="result-actions">
+        <button class="primary-action" id="restart-simulation" type="button">再练一次</button>
+        <button class="secondary-action" id="return-start" type="button">返回主界面</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./captcha-symbols.js"></script>
+    <script src="./captcha-digits.js"></script>
+    <script src="./captcha-backgrounds.js"></script>
+    <script src="./simulation.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
