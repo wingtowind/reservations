@@ -2,6 +2,7 @@ const eventPage = document.querySelector(".event-page");
 const dimmer = document.querySelector("#screen-dimmer");
 const slotSheet = document.querySelector("#slot-sheet");
 const captchaDialog = document.querySelector("#captcha-dialog");
+const captchaPreparing = document.querySelector("#captcha-preparing");
 const captchaScene = document.querySelector("#captcha-scene");
 const captchaPicture = document.querySelector("#captcha-picture");
 const captchaTokens = document.querySelector("#captcha-tokens");
@@ -57,7 +58,9 @@ let toastTimer;
 let completionTimer;
 let verificationTimer;
 let errorResetTimer;
+let captchaRevealTimer;
 const captchaTiming = { checking: 150, error: 1000, success: 600 };
+const captchaRevealDelayMs = 2000;
 
 function updateSlotAvailability() {
   const available = simulation.canReserve;
@@ -394,28 +397,41 @@ function tokenAtPoint(point) {
     const radians = token.rotation * Math.PI / 180;
     const localX = dx * Math.cos(radians) + dy * Math.sin(radians);
     const localY = -dx * Math.sin(radians) + dy * Math.cos(radians);
-    // Leave room for a fingertip, while selecting the nearest glyph if areas overlap.
-    const padding = token.id === "digit-2" ? 22 : 16;
-    const minimum = token.id === "digit-2" ? 32 : 28;
-    const halfWidth = Math.max(element.offsetWidth / 2 + padding, minimum);
-    const halfHeight = Math.max(element.offsetHeight / 2 + padding, minimum);
-    if (Math.abs(localX) > halfWidth || Math.abs(localY) > halfHeight) return [];
-    return [{ token, distance: (localX / halfWidth) ** 2 + (localY / halfHeight) ** 2 }];
+    // Approximate a fingertip as a 24 px square; at least half must overlap the visible glyph bounds.
+    const touchHalfSize = 12;
+    const halfWidth = element.offsetWidth / 2;
+    const halfHeight = element.offsetHeight / 2;
+    const overlapX = Math.max(0, Math.min(localX + touchHalfSize, halfWidth) - Math.max(localX - touchHalfSize, -halfWidth));
+    const overlapY = Math.max(0, Math.min(localY + touchHalfSize, halfHeight) - Math.max(localY - touchHalfSize, -halfHeight));
+    const overlap = overlapX * overlapY / (4 * touchHalfSize * touchHalfSize);
+    if (overlap < 0.5) return [];
+    return [{ token, overlap, distance: (localX / halfWidth) ** 2 + (localY / halfHeight) ** 2 }];
   });
-  candidates.sort((a, b) => a.distance - b.distance);
+  candidates.sort((a, b) => b.overlap - a.overlap || a.distance - b.distance);
   return candidates[0]?.token;
 }
 
 captchaPicture.addEventListener("click", selectPoint);
 
-function openCaptcha() {
+function openCaptcha(delayMs = 0) {
+  window.clearTimeout(captchaRevealTimer);
   renderChallenge(makeChallenge());
-  captchaDialog.hidden = false;
+  captchaDialog.hidden = delayMs > 0;
+  captchaPreparing.hidden = delayMs === 0;
+  if (delayMs > 0) {
+    captchaRevealTimer = window.setTimeout(() => {
+      if (slotSheet.hidden) return;
+      captchaPreparing.hidden = true;
+      captchaDialog.hidden = false;
+    }, delayMs);
+  }
 }
 
 function closeReservationFlow() {
+  window.clearTimeout(captchaRevealTimer);
   cancelCaptchaTimers();
   setCaptchaState("selecting");
+  captchaPreparing.hidden = true;
   captchaDialog.hidden = true;
   slotSheet.hidden = true;
   dimmer.hidden = true;
@@ -438,7 +454,7 @@ document.querySelectorAll(".time-slot").forEach((slot) => {
     if (slot.disabled || !simulation.selectSlot({ date: slot.dataset.date, time: slot.dataset.time })) return;
     document.querySelectorAll(".time-slot").forEach((item) => item.classList.remove("selected"));
     slot.classList.add("selected");
-    openCaptcha();
+    openCaptcha(captchaRevealDelayMs);
   });
 });
 
