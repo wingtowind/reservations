@@ -129,9 +129,7 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
 .poster-image {
   display: block;
   width: 100%;
-  height: clamp(205px, 54vw, 275px);
-  object-fit: cover;
-  object-position: center 52%;
+  height: auto;
 }
 
 .event-details { position: relative; margin: -4px 18px 0; padding: 14px 17px 92px; border-radius: 22px 22px 0 0; background: #fff9e5; color: #674f48; text-align: center; box-shadow: 0 8px 22px rgba(0,0,0,.12); }
