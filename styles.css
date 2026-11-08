@@ -29,10 +29,10 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
   width: min(100%, 520px);
   min-height: 100svh;
   margin: 0 auto;
-  padding-top: 56px;
+  padding-top: 0;
   padding-bottom: calc(112px + env(safe-area-inset-bottom));
   overflow: hidden;
-  background: #fff;
+  background: #25295a;
 }
 
 .topbar, .success-header {
@@ -129,8 +129,16 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
 .poster-image {
   display: block;
   width: 100%;
-  height: auto;
+  height: clamp(205px, 54vw, 275px);
+  object-fit: cover;
+  object-position: center 52%;
 }
+
+.event-details { position: relative; margin: -4px 18px 0; padding: 14px 17px 92px; border-radius: 22px 22px 0 0; background: #fff9e5; color: #674f48; text-align: center; box-shadow: 0 8px 22px rgba(0,0,0,.12); }
+.event-details-lead { margin: 4px 0 16px; color: #8b5744; font-size: 13px; font-weight: 700; }
+.event-details h2 { display: table; margin: 16px auto 11px; padding: 4px 18px; border-radius: 99px; background: #623338; color: #fff6e7; font-family: "Songti SC", "Noto Serif SC", "SimSun", serif; font-size: 17px; line-height: 1.2; }
+.event-details p { font-size: 13px; line-height: 1.7; }
+.event-details strong { color: #77483f; }
 
 .bottom-actions {
   position: fixed;
@@ -173,7 +181,7 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
   bottom: 0;
   left: 50%;
   width: min(100%, 520px);
-  max-height: 78svh;
+  max-height: 52svh;
   padding: 0;
   overflow: hidden;
   border-radius: 22px 22px 0 0;
@@ -185,9 +193,9 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
 .slot-sheet h2 { margin: 0; text-align: center; font-size: 21px; }
 .slot-list { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding: 0 22px calc(24px + env(safe-area-inset-bottom)); scrollbar-width: thin; }
 .sheet-close { position: absolute; top: 13px; right: 16px; border: 0; background: none; color: #807b7e; font-size: 28px; }
-.session-heading { margin: 14px 0 8px; padding: 8px 12px; background: #faf9fc; color: #96939b; font-size: 14px; }
+.session-heading { margin: 14px 0 8px; padding: 8px 12px; background: #f8f8fb; color: #96939b; font-size: 14px; }
 .session-heading.afternoon { margin-top: 16px; }
-.time-slot { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 1px; border: 0; background: white; color: #29272a; text-align: left; }
+.time-slot { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 11px 1px; border: 0; background: white; color: #29272a; text-align: left; }
 .time-slot em, .time-slot small { color: #8997cf; font-style: normal; font-size: 13px; }
 .time-slot small { flex: none; white-space: nowrap; }
 .time-slot { cursor: pointer; }
@@ -195,6 +203,10 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
 .time-slot:disabled { cursor: not-allowed; opacity: 1; }
 .time-slot:disabled em, .time-slot:disabled small { color: #aaa; }
 .time-slot.selected span { font-weight: 700; }
+
+.captcha-preparing { position: fixed; z-index: 7; top: 50%; left: 50%; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 150px; padding: 20px; border-radius: 8px; background: #fff; color: #777; transform: translate(-50%, -50%); }
+.captcha-preparing-dots { color: #2383ee; font-size: 28px; letter-spacing: 4px; line-height: 1; }
+.captcha-preparing button { border: 0; border-radius: 4px; padding: 8px 16px; background: #2383ee; color: #fff; }
 
 .captcha-dialog {
   --prompt-glyph-height: clamp(20px, 5vw, 30px);
