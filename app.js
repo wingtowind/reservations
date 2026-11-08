@@ -2,9 +2,6 @@ const eventPage = document.querySelector(".event-page");
 const dimmer = document.querySelector("#screen-dimmer");
 const slotSheet = document.querySelector("#slot-sheet");
 const captchaDialog = document.querySelector("#captcha-dialog");
-const captchaPreparing = document.querySelector("#captcha-preparing");
-const captchaPreparingMessage = document.querySelector("#captcha-preparing-message");
-const retryCaptchaLoad = document.querySelector("#retry-captcha-load");
 const captchaScene = document.querySelector("#captcha-scene");
 const captchaPicture = document.querySelector("#captcha-picture");
 const captchaTokens = document.querySelector("#captcha-tokens");
@@ -48,9 +45,6 @@ let challenge = null;
 let selectedPoints = [];
 const tokenElements = new Map();
 let previousBackground = "";
-let preparedChallenge = null;
-let captchaRequestId = 0;
-const imageLoads = new Map();
 let clockFrame;
 let lastAvailability = null;
 let captchaState = "selecting";
@@ -88,7 +82,6 @@ function startSimulation() {
   window.clearTimeout(toastTimer);
   toast.classList.remove("visible");
   simulation.start();
-  if (!preparedChallenge) preparedChallenge = prepareChallenge();
   challenge = null;
   selectedPoints = [];
   captchaMarks.replaceChildren();
@@ -108,7 +101,6 @@ function returnToStart() {
   window.clearTimeout(toastTimer);
   toast.classList.remove("visible");
   simulation.reset();
-  preparedChallenge = prepareChallenge();
   challenge = null;
   resultDialog.hidden = true;
   eventPage.hidden = true;
@@ -204,32 +196,6 @@ function randomBackground() {
   return next;
 }
 
-function loadImage(src) {
-  if (!imageLoads.has(src)) {
-    const pending = new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => {
-        if (image.decode) image.decode().then(resolve, resolve);
-        else resolve();
-      };
-      image.onerror = () => reject(new Error(`图片加载失败：${src}`));
-      image.src = src;
-    });
-    imageLoads.set(src, pending);
-    pending.catch(() => {
-      if (imageLoads.get(src) === pending) imageLoads.delete(src);
-    });
-  }
-  return imageLoads.get(src);
-}
-
-function prepareChallenge() {
-  const next = makeChallenge();
-  const sources = new Set([next.background, ...next.boardTokens.map((token) => token.src)]);
-  const ready = Promise.all([...sources].map(loadImage)).then(() => true, () => false);
-  return { challenge: next, ready };
-}
-
 function randomPromptPattern() {
   const totalWeight = promptPatterns.reduce((total, pattern) => total + pattern.weight, 0);
   let draw = Math.random() * totalWeight;
@@ -299,9 +265,9 @@ function tokenMarkup(token, prompt = false) {
   return `<span class="${className} captcha-glyph" style="--glyph-ratio:${width / height}" aria-hidden="true">${glyphImageMarkup(token)}</span>`;
 }
 
-function renderChallenge(nextChallenge) {
+function renderChallenge() {
   cancelCaptchaTimers();
-  challenge = nextChallenge;
+  challenge = makeChallenge();
   selectedPoints = [];
   setCaptchaState("selecting");
   tokenElements.clear();
@@ -358,69 +324,35 @@ function selectPoint(event) {
   const x = (event.clientX - rect.left) / rect.width;
   const y = (event.clientY - rect.top) / rect.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
-  const token = tokenAtPoint({ x, y });
-  if (!token) {
-    captchaFeedback.textContent = "请点击图片中的图标或数字";
-    return;
-  }
-  if (selectedPoints.some((point) => point.id === token.id)) {
-    captchaFeedback.textContent = "这个位置已选，可点击编号取消";
-    return;
-  }
-  selectedPoints.push({ x, y, id: token.id });
+  selectedPoints.push({ x, y });
   renderMarks();
 }
 
 function tokenAtPoint(point) {
   const rect = captchaPicture.getBoundingClientRect();
-  const candidates = challenge.boardTokens.flatMap((token) => {
+  // Reverse the displayed rotation before checking the visible artwork's bounds.
+  return [...challenge.boardTokens].reverse().find((token) => {
     const element = tokenElements.get(token.id);
-    if (!element || !element.offsetWidth || !element.offsetHeight) return [];
+    if (!element || !element.offsetWidth || !element.offsetHeight) return false;
     const dx = (point.x - token.x) * rect.width;
     const dy = (point.y - token.y) * rect.height;
     const radians = token.rotation * Math.PI / 180;
     const localX = dx * Math.cos(radians) + dy * Math.sin(radians);
     const localY = -dx * Math.sin(radians) + dy * Math.cos(radians);
-    // Leave room for a fingertip, while selecting the nearest glyph if areas overlap.
-    const padding = token.id === "digit-2" ? 22 : 16;
-    const minimum = token.id === "digit-2" ? 32 : 28;
-    const halfWidth = Math.max(element.offsetWidth / 2 + padding, minimum);
-    const halfHeight = Math.max(element.offsetHeight / 2 + padding, minimum);
-    if (Math.abs(localX) > halfWidth || Math.abs(localY) > halfHeight) return [];
-    return [{ token, distance: (localX / halfWidth) ** 2 + (localY / halfHeight) ** 2 }];
+    return Math.abs(localX) <= element.offsetWidth / 2 && Math.abs(localY) <= element.offsetHeight / 2;
   });
-  candidates.sort((a, b) => a.distance - b.distance);
-  return candidates[0]?.token;
 }
 
 captchaPicture.addEventListener("click", selectPoint);
 
 function openCaptcha() {
-  const requestId = ++captchaRequestId;
-  const prepared = preparedChallenge || prepareChallenge();
-  preparedChallenge = null;
-  captchaDialog.hidden = true;
-  captchaPreparing.hidden = false;
-  captchaPreparingMessage.textContent = "正在加载验证码";
-  retryCaptchaLoad.hidden = true;
-  prepared.ready.then((loaded) => {
-    if (requestId !== captchaRequestId || slotSheet.hidden) return;
-    if (!loaded) {
-      captchaPreparingMessage.textContent = "验证码加载失败";
-      retryCaptchaLoad.hidden = false;
-      return;
-    }
-    renderChallenge(prepared.challenge);
-    captchaPreparing.hidden = true;
-    captchaDialog.hidden = false;
-  });
+  renderChallenge();
+  captchaDialog.hidden = false;
 }
 
 function closeReservationFlow() {
-  captchaRequestId += 1;
   cancelCaptchaTimers();
   setCaptchaState("selecting");
-  captchaPreparing.hidden = true;
   captchaDialog.hidden = true;
   slotSheet.hidden = true;
   dimmer.hidden = true;
@@ -434,7 +366,8 @@ document.querySelector("#open-slots").addEventListener("click", () => {
 });
 
 document.querySelector("#close-slots").addEventListener("click", () => {
-  closeReservationFlow();
+  slotSheet.hidden = true;
+  dimmer.hidden = true;
 });
 
 document.querySelectorAll(".time-slot").forEach((slot) => {
@@ -449,9 +382,8 @@ document.querySelectorAll(".time-slot").forEach((slot) => {
 
 refreshCaptcha.addEventListener("click", () => {
   if (captchaState === "checking" || captchaState === "success") return;
-  openCaptcha();
+  renderChallenge();
 });
-retryCaptchaLoad.addEventListener("click", openCaptcha);
 document.querySelector("#close-captcha").addEventListener("click", closeReservationFlow);
 
 confirmCaptcha.addEventListener("click", () => {
@@ -462,7 +394,7 @@ confirmCaptcha.addEventListener("click", () => {
   }
 
   const submittedChallenge = challenge;
-  const correct = selectedPoints.every((point, index) => point.id === challenge.targetIds[index]);
+  const correct = selectedPoints.every((point, index) => tokenAtPoint(point)?.id === challenge.targetIds[index]);
   captchaFeedback.textContent = "";
   setCaptchaState("checking");
   verificationTimer = window.setTimeout(() => {
@@ -490,10 +422,12 @@ confirmCaptcha.addEventListener("click", () => {
 document.querySelector("#start-simulation").addEventListener("click", startSimulation);
 document.querySelector("#restart-simulation").addEventListener("click", startSimulation);
 document.querySelector("#return-start").addEventListener("click", returnToStart);
+document.querySelector("#back-to-start").addEventListener("click", returnToStart);
 
 dimmer.addEventListener("click", () => {
   if (!captchaDialog.hidden || !resultDialog.hidden) return;
-  closeReservationFlow();
+  slotSheet.hidden = true;
+  dimmer.hidden = true;
 });
 
 document.addEventListener("keydown", (event) => {
@@ -501,4 +435,3 @@ document.addEventListener("keydown", (event) => {
 });
 
 updateSlotAvailability();
-preparedChallenge = prepareChallenge();
