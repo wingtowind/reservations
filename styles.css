@@ -205,7 +205,7 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
   bottom: 0;
   left: 50%;
   width: min(100%, 520px);
-  max-height: 52svh;
+  max-height: 66svh;
   padding: 0;
   overflow: hidden;
   border-radius: 22px 22px 0 0;

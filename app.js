@@ -60,7 +60,7 @@ let verificationTimer;
 let errorResetTimer;
 let captchaRevealTimer;
 const captchaTiming = { checking: 150, error: 1000, success: 600 };
-const captchaRevealDelayMs = 2000;
+const captchaRevealDelayMs = 800;
 
 function updateSlotAvailability() {
   const available = simulation.canReserve;
@@ -375,15 +375,11 @@ function selectPoint(event) {
   const y = (event.clientY - rect.top) / rect.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
   const token = tokenAtPoint({ x, y });
-  if (!token) {
-    captchaFeedback.textContent = "请点击图片中的图标或数字";
-    return;
-  }
-  if (selectedPoints.some((point) => point.id === token.id)) {
+  if (token && selectedPoints.some((point) => point.id === token.id)) {
     captchaFeedback.textContent = "这个位置已选，可点击编号取消";
     return;
   }
-  selectedPoints.push({ x, y, id: token.id });
+  selectedPoints.push({ x, y, id: token?.id ?? null });
   renderMarks();
 }
 
