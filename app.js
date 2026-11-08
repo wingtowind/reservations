@@ -2,9 +2,6 @@ const eventPage = document.querySelector(".event-page");
 const dimmer = document.querySelector("#screen-dimmer");
 const slotSheet = document.querySelector("#slot-sheet");
 const captchaDialog = document.querySelector("#captcha-dialog");
-const captchaPreparing = document.querySelector("#captcha-preparing");
-const captchaPreparingMessage = document.querySelector("#captcha-preparing-message");
-const retryCaptchaLoad = document.querySelector("#retry-captcha-load");
 const captchaScene = document.querySelector("#captcha-scene");
 const captchaPicture = document.querySelector("#captcha-picture");
 const captchaTokens = document.querySelector("#captcha-tokens");
@@ -24,18 +21,21 @@ const slotList = document.querySelector("#slot-list");
 const simulation = new window.ReservationSimulation(() => window.performance.now());
 
 const backgroundPool = window.CaptchaBackgrounds.map((background) => background.src);
+const embeddedGlyphs = window.CaptchaEmbedded.glyphs;
+const fallbackBackground = window.CaptchaEmbedded.fallbackBackground;
+const readyBackgrounds = new Set();
 const iconPool = Object.entries(window.CaptchaSymbols).map(([id, symbol]) => ({
   id,
   label: symbol.name,
   kind: "icon",
-  src: symbol.src
+  src: embeddedGlyphs[symbol.src]
 }));
 const digitPool = Array.from({ length: 10 }, (_, value) => ({
   id: `digit-${value}`,
   label: `数字 ${value}`,
   kind: "digit",
   value: String(value),
-  src: window.CaptchaDigits[String(value)]
+  src: embeddedGlyphs[window.CaptchaDigits[String(value)]]
 }));
 const tokenPool = [...digitPool, ...iconPool];
 const promptPatterns = [
@@ -48,8 +48,6 @@ let challenge = null;
 let selectedPoints = [];
 const tokenElements = new Map();
 let previousBackground = "";
-let preparedChallenge = null;
-let captchaRequestId = 0;
 const imageLoads = new Map();
 const imageLoadTimeoutMs = 7000;
 let clockFrame;
@@ -89,7 +87,6 @@ function startSimulation() {
   window.clearTimeout(toastTimer);
   toast.classList.remove("visible");
   simulation.start();
-  if (!preparedChallenge) preparedChallenge = prepareChallenge();
   challenge = null;
   selectedPoints = [];
   captchaMarks.replaceChildren();
@@ -109,7 +106,6 @@ function returnToStart() {
   window.clearTimeout(toastTimer);
   toast.classList.remove("visible");
   simulation.reset();
-  preparedChallenge = prepareChallenge();
   challenge = null;
   resultDialog.hidden = true;
   eventPage.hidden = true;
@@ -199,10 +195,22 @@ function shuffled(items) {
 }
 
 function randomBackground() {
-  const choices = backgroundPool.filter((path) => path !== previousBackground);
+  const choices = [fallbackBackground, ...readyBackgrounds].filter((path) => path !== previousBackground);
+  if (!choices.length) return fallbackBackground;
   const next = choices[Math.floor(Math.random() * choices.length)];
   previousBackground = next;
   return next;
+}
+
+async function preloadBackgrounds() {
+  for (const src of shuffled(backgroundPool)) {
+    try {
+      await loadImage(src);
+      readyBackgrounds.add(src);
+    } catch {
+      // The embedded background keeps the challenge usable when a request fails.
+    }
+  }
 }
 
 function loadImage(src) {
@@ -233,13 +241,6 @@ function loadImage(src) {
     });
   }
   return imageLoads.get(src);
-}
-
-function prepareChallenge() {
-  const next = makeChallenge();
-  const sources = new Set([next.background, ...next.boardTokens.map((token) => token.src)]);
-  const ready = Promise.all([...sources].map(loadImage)).then(() => true, () => false);
-  return { challenge: next, ready };
 }
 
 function randomPromptPattern() {
@@ -407,36 +408,14 @@ function tokenAtPoint(point) {
 
 captchaPicture.addEventListener("click", selectPoint);
 
-function openCaptcha(retryAttempt = 0) {
-  const requestId = ++captchaRequestId;
-  const prepared = preparedChallenge || prepareChallenge();
-  preparedChallenge = null;
-  captchaDialog.hidden = true;
-  captchaPreparing.hidden = false;
-  captchaPreparingMessage.textContent = retryAttempt ? "正在重试加载验证码" : "正在加载验证码";
-  retryCaptchaLoad.hidden = true;
-  prepared.ready.then((loaded) => {
-    if (requestId !== captchaRequestId || slotSheet.hidden) return;
-    if (!loaded) {
-      if (retryAttempt === 0) {
-        openCaptcha(1);
-        return;
-      }
-      captchaPreparingMessage.textContent = "验证码加载失败";
-      retryCaptchaLoad.hidden = false;
-      return;
-    }
-    renderChallenge(prepared.challenge);
-    captchaPreparing.hidden = true;
-    captchaDialog.hidden = false;
-  });
+function openCaptcha() {
+  renderChallenge(makeChallenge());
+  captchaDialog.hidden = false;
 }
 
 function closeReservationFlow() {
-  captchaRequestId += 1;
   cancelCaptchaTimers();
   setCaptchaState("selecting");
-  captchaPreparing.hidden = true;
   captchaDialog.hidden = true;
   slotSheet.hidden = true;
   dimmer.hidden = true;
@@ -467,7 +446,6 @@ refreshCaptcha.addEventListener("click", () => {
   if (captchaState === "checking" || captchaState === "success") return;
   openCaptcha();
 });
-retryCaptchaLoad.addEventListener("click", () => openCaptcha());
 document.querySelector("#close-captcha").addEventListener("click", closeReservationFlow);
 
 confirmCaptcha.addEventListener("click", () => {
@@ -517,4 +495,4 @@ document.addEventListener("keydown", (event) => {
 });
 
 updateSlotAvailability();
-preparedChallenge = prepareChallenge();
+window.addEventListener("load", preloadBackgrounds, { once: true });
