@@ -51,6 +51,7 @@ let previousBackground = "";
 let preparedChallenge = null;
 let captchaRequestId = 0;
 const imageLoads = new Map();
+const imageLoadTimeoutMs = 7000;
 let clockFrame;
 let lastAvailability = null;
 let captchaState = "selecting";
@@ -208,11 +209,22 @@ function loadImage(src) {
   if (!imageLoads.has(src)) {
     const pending = new Promise((resolve, reject) => {
       const image = new Image();
-      image.onload = () => {
-        if (image.decode) image.decode().then(resolve, resolve);
+      let finished = false;
+      const finish = (error) => {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timeout);
+        image.onload = null;
+        image.onerror = null;
+        if (error) reject(error);
         else resolve();
       };
-      image.onerror = () => reject(new Error(`图片加载失败：${src}`));
+      const timeout = window.setTimeout(() => finish(new Error(`图片加载超时：${src}`)), imageLoadTimeoutMs);
+      image.onload = () => {
+        if (image.decode) image.decode().then(() => finish(), () => finish());
+        else finish();
+      };
+      image.onerror = () => finish(new Error(`图片加载失败：${src}`));
       image.src = src;
     });
     imageLoads.set(src, pending);
@@ -395,17 +407,21 @@ function tokenAtPoint(point) {
 
 captchaPicture.addEventListener("click", selectPoint);
 
-function openCaptcha() {
+function openCaptcha(retryAttempt = 0) {
   const requestId = ++captchaRequestId;
   const prepared = preparedChallenge || prepareChallenge();
   preparedChallenge = null;
   captchaDialog.hidden = true;
   captchaPreparing.hidden = false;
-  captchaPreparingMessage.textContent = "正在加载验证码";
+  captchaPreparingMessage.textContent = retryAttempt ? "正在重试加载验证码" : "正在加载验证码";
   retryCaptchaLoad.hidden = true;
   prepared.ready.then((loaded) => {
     if (requestId !== captchaRequestId || slotSheet.hidden) return;
     if (!loaded) {
+      if (retryAttempt === 0) {
+        openCaptcha(1);
+        return;
+      }
       captchaPreparingMessage.textContent = "验证码加载失败";
       retryCaptchaLoad.hidden = false;
       return;
@@ -451,7 +467,7 @@ refreshCaptcha.addEventListener("click", () => {
   if (captchaState === "checking" || captchaState === "success") return;
   openCaptcha();
 });
-retryCaptchaLoad.addEventListener("click", openCaptcha);
+retryCaptchaLoad.addEventListener("click", () => openCaptcha());
 document.querySelector("#close-captcha").addEventListener("click", closeReservationFlow);
 
 confirmCaptcha.addEventListener("click", () => {
