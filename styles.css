@@ -291,6 +291,7 @@ button:focus-visible { outline: 3px solid #164fa5; outline-offset: 3px; }
   height: var(--glyph-height);
   overflow: hidden;
 }
+.prompt-token { transform: none; }
 .captcha-glyph img { position: absolute; display: block; max-width: none; pointer-events: none; }
 .captcha-close { position: absolute; top: 14px; right: 17px; width: 40px; height: 40px; border: 2px solid #aaa; border-radius: 50%; background: #fff; color: #888; font-size: 34px; font-weight: 300; line-height: 31px; }
 .captcha-dialog h2 { padding-right: 45px; }

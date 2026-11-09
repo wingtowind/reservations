@@ -155,13 +155,13 @@ function setCaptchaState(state) {
 const glyphBounds = {
   'digit-0': [192, 192, 22, 15, 147, 162],
   'digit-1': [192, 192, 52, 15, 88, 162],
-  'digit-2': [100, 130, 17, 6.878, 67, 113.122],
+  'digit-2': [100, 130, 14, 13, 72, 104],
   'digit-3': [100, 130, 19, 8.236, 71.188, 115.433],
   'digit-4': [192, 192, 40, 15, 113, 162],
-  'digit-5': [100, 130, 14, 12, 75.37, 115.854],
+  'digit-5': [100, 130, 14, 13, 72, 104],
   'digit-6': [100, 130, 18.811, 10.389, 73.243, 111.042],
   'digit-7': [192, 192, 42, 15, 107, 162],
-  'digit-8': [100, 130, 16, 8, 72, 121],
+  'digit-8': [100, 130, 14, 13, 72, 104],
   'digit-9': [192, 192, 45, 15, 102, 162],
   chartGrowth: [192, 192, 15, 16, 162, 160],
   locationRoute: [192, 192, 20, 11, 152, 132],
@@ -393,17 +393,23 @@ function tokenAtPoint(point) {
     const radians = token.rotation * Math.PI / 180;
     const localX = dx * Math.cos(radians) + dy * Math.sin(radians);
     const localY = -dx * Math.sin(radians) + dy * Math.cos(radians);
-    // Approximate a fingertip as a 24 px square; at least half must overlap the visible glyph bounds.
-    const touchHalfSize = 12;
     const halfWidth = element.offsetWidth / 2;
     const halfHeight = element.offsetHeight / 2;
+    if (token.kind === "digit") {
+      // Include the full slim digit rectangle, including its open center and corners.
+      const digitPadding = 4;
+      if (Math.abs(localX) > halfWidth + digitPadding || Math.abs(localY) > halfHeight + digitPadding) return [];
+      return [{ token, distance: dx * dx + dy * dy }];
+    }
+    // Icons still require at least half of a 24 px fingertip area to overlap.
+    const touchHalfSize = 12;
     const overlapX = Math.max(0, Math.min(localX + touchHalfSize, halfWidth) - Math.max(localX - touchHalfSize, -halfWidth));
     const overlapY = Math.max(0, Math.min(localY + touchHalfSize, halfHeight) - Math.max(localY - touchHalfSize, -halfHeight));
     const overlap = overlapX * overlapY / (4 * touchHalfSize * touchHalfSize);
     if (overlap < 0.5) return [];
-    return [{ token, overlap, distance: (localX / halfWidth) ** 2 + (localY / halfHeight) ** 2 }];
+    return [{ token, distance: dx * dx + dy * dy }];
   });
-  candidates.sort((a, b) => b.overlap - a.overlap || a.distance - b.distance);
+  candidates.sort((a, b) => a.distance - b.distance);
   return candidates[0]?.token;
 }
 
@@ -438,6 +444,7 @@ document.querySelector("#open-slots").addEventListener("click", () => {
   updateSimulationClock();
   dimmer.hidden = false;
   slotSheet.hidden = false;
+  slotList.scrollTop = 0;
 });
 
 document.querySelector("#close-slots").addEventListener("click", () => {
