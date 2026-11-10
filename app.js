@@ -153,16 +153,16 @@ function setCaptchaState(state) {
 
 // Visible artwork bounds, excluding transparent padding. SVG bounds include the stroke.
 const glyphBounds = {
-  'digit-0': [192, 192, 22, 15, 147, 162],
-  'digit-1': [192, 192, 52, 15, 88, 162],
-  'digit-2': [100, 130, 14, 13, 72, 104],
+  'digit-0': [192, 192, 46.5, 15, 99, 162],
+  'digit-1': [192, 192, 61.72, 15, 68.56, 162],
+  'digit-2': [192, 192, 45.67, 15, 100.65, 162],
   'digit-3': [100, 130, 19, 8.236, 71.188, 115.433],
-  'digit-4': [192, 192, 40, 15, 113, 162],
-  'digit-5': [100, 130, 14, 13, 72, 104],
+  'digit-4': [192, 192, 39.92, 15, 112.15, 162],
+  'digit-5': [192, 192, 45.22, 15, 101.55, 162],
   'digit-6': [100, 130, 18.811, 10.389, 73.243, 111.042],
-  'digit-7': [192, 192, 42, 15, 107, 162],
-  'digit-8': [100, 130, 14, 13, 72, 104],
-  'digit-9': [192, 192, 45, 15, 102, 162],
+  'digit-7': [192, 192, 43.09, 15, 105.82, 162],
+  'digit-8': [192, 192, 46.26, 15, 99.49, 162],
+  'digit-9': [192, 192, 46.38, 15, 99.24, 162],
   chartGrowth: [192, 192, 15, 16, 162, 160],
   locationRoute: [192, 192, 20, 11, 152, 132],
   dashboard: [192, 192, 28, 15, 136, 162],
@@ -262,6 +262,20 @@ function takeRandom(pool, count) {
   return shuffled(pool).slice(0, count).map((token) => ({ ...token }));
 }
 
+function randomBoardPoint(token) {
+  const x = () => 0.1 + Math.random() * 0.8;
+  const y = () => 0.15 + Math.random() * 0.7;
+  if (token.kind !== "icon" || Math.random() >= 0.55) return { x: x(), y: y() };
+
+  // Favor the outer safe bands while leaving room for rotation and tapping.
+  switch (Math.floor(Math.random() * 4)) {
+    case 0: return { x: 0.1 + Math.random() * 0.09, y: y() };
+    case 1: return { x: 0.81 + Math.random() * 0.09, y: y() };
+    case 2: return { x: x(), y: 0.15 + Math.random() * 0.09 };
+    default: return { x: x(), y: 0.76 + Math.random() * 0.09 };
+  }
+}
+
 function makeChallenge() {
   const pattern = randomPromptPattern();
   const targetTokens = shuffled([
@@ -287,18 +301,24 @@ function makeChallenge() {
   const placedTokens = shuffled(boardTokens);
   const placed = [];
 
-  placedTokens.forEach((token) => {
-    let x = 0.5;
-    let y = 0.5;
-    let attempts = 0;
-    do {
-      x = 0.1 + Math.random() * 0.8;
-      y = 0.15 + Math.random() * 0.7;
-      attempts += 1;
-    } while (attempts < 120 && placed.some((point) => Math.hypot(point.x - x, point.y - y) < 0.2));
-    placed.push({ x, y });
-    token.x = x;
-    token.y = y;
+  // Position icons first so later tokens do not crowd them away from an edge.
+  const placementOrder = [...placedTokens].sort((a, b) => Number(b.kind === "icon") - Number(a.kind === "icon"));
+  placementOrder.forEach((token) => {
+    let chosen;
+    let best;
+    let bestDistance = -1;
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      const candidate = randomBoardPoint(token);
+      const distance = placed.length
+        ? Math.min(...placed.map((point) => Math.hypot(point.x - candidate.x, point.y - candidate.y)))
+        : Infinity;
+      if (distance > bestDistance) { best = candidate; bestDistance = distance; }
+      if (distance >= 0.23) { chosen = candidate; break; }
+    }
+    const position = chosen || best;
+    placed.push(position);
+    token.x = position.x;
+    token.y = position.y;
     token.rotation = Math.round(-30 + Math.random() * 60);
   });
 
@@ -312,7 +332,7 @@ function makeChallenge() {
 function tokenMarkup(token, prompt = false) {
   const className = prompt ? "prompt-token" : "captcha-token";
   const [, , , , width, height] = glyphMetrics(token);
-  return `<span class="${className} captcha-glyph" style="--glyph-ratio:${width / height}" aria-hidden="true">${glyphImageMarkup(token)}</span>`;
+  return `<span class="${className} captcha-glyph${token.kind === "digit" ? " captcha-digit" : ""}" style="--glyph-ratio:${width / height}" aria-hidden="true">${glyphImageMarkup(token)}</span>`;
 }
 
 function renderChallenge(nextChallenge) {
@@ -333,7 +353,7 @@ function renderChallenge(nextChallenge) {
   challenge.boardTokens.forEach((token) => {
     const element = document.createElement("span");
     const [, , , , width, height] = glyphMetrics(token);
-    element.className = "captcha-token captcha-glyph";
+    element.className = `captcha-token captcha-glyph${token.kind === "digit" ? " captcha-digit" : ""}`;
     element.setAttribute("aria-label", token.label);
     element.style.left = `${token.x * 100}%`;
     element.style.top = `${token.y * 100}%`;
@@ -397,7 +417,7 @@ function tokenAtPoint(point) {
     const halfHeight = element.offsetHeight / 2;
     if (token.kind === "digit") {
       // Include the full slim digit rectangle, including its open center and corners.
-      const digitPadding = 4;
+      const digitPadding = 5;
       if (Math.abs(localX) > halfWidth + digitPadding || Math.abs(localY) > halfHeight + digitPadding) return [];
       return [{ token, distance: dx * dx + dy * dy }];
     }
